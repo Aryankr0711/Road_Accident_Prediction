@@ -1,27 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { Card, Form, Button, Row, Col, Alert, Spinner } from 'react-bootstrap';
-import { Doughnut, Bar } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  ArcElement,
-  Tooltip,
-  Legend,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-} from 'chart.js';
-
-ChartJS.register(
-  ArcElement,
-  Tooltip,
-  Legend,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title
-);
 
 const PredictionForm = () => {
   const [formData, setFormData] = useState({
@@ -79,7 +58,7 @@ const PredictionForm = () => {
       };
 
       console.log('Sending request data:', requestData);
-      const response = await axios.post('http://localhost:5000/predict', requestData);
+      const response = await axios.post('/predict', requestData);
       console.log('Received response:', response.data);
       setPrediction(response.data.accident_risk);
     } catch (err) {
@@ -99,106 +78,7 @@ const PredictionForm = () => {
     return { level: 'High Risk', color: '#dc3545' };
   };
 
-  const getDoughnutData = (probability) => {
-    const riskProb = probability;
-    const safeProb = 1 - probability;
-    const riskLevel = getRiskLevel(probability);
 
-    return {
-      labels: ['Risk Probability', 'Safe Probability'],
-      datasets: [{
-        data: [riskProb, safeProb],
-        backgroundColor: [riskLevel.color, '#6c757d'],
-        borderColor: ['#ffffff', '#ffffff'],
-        borderWidth: 2,
-      }],
-    };
-  };
-
-  const getBarData = (probability) => {
-    const riskLevel = getRiskLevel(probability);
-    const levels = ['Low Risk', 'Moderate Risk', 'High Risk'];
-    const colors = ['#28a745', '#ffc107', '#dc3545'];
-
-    const currentIndex = levels.indexOf(riskLevel.level);
-    const values = levels.map((level, index) =>
-      index <= currentIndex ? (index === currentIndex ? probability * 100 : (index === 0 ? 30 : index === 1 ? 70 : 100)) : 0
-    );
-
-    return {
-      labels: levels,
-      datasets: [{
-        label: 'Risk Level (%)',
-        data: values,
-        backgroundColor: colors.map((color, index) =>
-          index === currentIndex ? color : 'rgba(108, 117, 125, 0.3)'
-        ),
-        borderColor: colors,
-        borderWidth: 1,
-      }],
-    };
-  };
-
-  const doughnutOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'bottom',
-        labels: {
-          color: 'white',
-          font: { size: 14 }
-        }
-      },
-      tooltip: {
-        callbacks: {
-          label: function(context) {
-            return `${context.label}: ${(context.parsed * 100).toFixed(2)}%`;
-          }
-        }
-      }
-    },
-  };
-
-  const barOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    scales: {
-      y: {
-        beginAtZero: true,
-        max: 100,
-        ticks: {
-          color: 'white',
-          callback: function(value) {
-            return value + '%';
-          }
-        },
-        grid: {
-          color: 'rgba(255, 255, 255, 0.1)'
-        }
-      },
-      x: {
-        ticks: {
-          color: 'white'
-        },
-        grid: {
-          color: 'rgba(255, 255, 255, 0.1)'
-        }
-      }
-    },
-    plugins: {
-      legend: {
-        display: false
-      },
-      tooltip: {
-        callbacks: {
-          label: function(context) {
-            return `${context.parsed.y}%`;
-          }
-        }
-      }
-    },
-  };
 
   return (
     <>
@@ -504,28 +384,7 @@ const PredictionForm = () => {
             </Card.Body>
           </Card>
 
-          <Row className="mt-4">
-            <Col md={6} className="mb-4">
-              <Card className="border-0 rounded-4" style={{ background: 'rgba(30, 30, 30, 0.95)' }}>
-                <Card.Body className="p-3">
-                  <h5 className="text-white text-center mb-3">Risk Distribution</h5>
-                  <div style={{ height: '250px' }}>
-                    <Doughnut data={getDoughnutData(prediction)} options={doughnutOptions} />
-                  </div>
-                </Card.Body>
-              </Card>
-            </Col>
-            <Col md={6} className="mb-4">
-              <Card className="border-0 rounded-4" style={{ background: 'rgba(30, 30, 30, 0.95)' }}>
-                <Card.Body className="p-3">
-                  <h5 className="text-white text-center mb-3">Risk Level Indicator</h5>
-                  <div style={{ height: '250px' }}>
-                    <Bar data={getBarData(prediction)} options={barOptions} />
-                  </div>
-                </Card.Body>
-              </Card>
-            </Col>
-          </Row>
+
         </div>
       )}
     </>
