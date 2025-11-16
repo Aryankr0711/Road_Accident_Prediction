@@ -59,7 +59,8 @@ const PredictionForm = () => {
       };
 
       console.log('Sending request data:', requestData);
-      const response = await axios.post('http://localhost:5000/predict', requestData);
+      const apiUrl = process.env.NODE_ENV === 'production' ? '/predict' : 'http://localhost:5000/predict';
+      const response = await axios.post(apiUrl, requestData);
       console.log('Received response:', response.data);
       setPrediction(response.data.accident_risk);
     } catch (err) {
