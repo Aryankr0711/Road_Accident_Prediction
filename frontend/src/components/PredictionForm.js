@@ -1,31 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { Card, Form, Button, Row, Col, Alert, Spinner } from 'react-bootstrap';
-import { Doughnut, Bar, Line } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  ArcElement,
-  Tooltip,
-  Legend,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  LineElement,
-  PointElement,
-} from 'chart.js';
-
-ChartJS.register(
-  ArcElement,
-  Tooltip,
-  Legend,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  LineElement,
-  PointElement
-);
+// Removed chart.js dependencies for simpler deployment
 
 const PredictionForm = () => {
   const [formData, setFormData] = useState({
@@ -103,178 +79,56 @@ const PredictionForm = () => {
     return { level: 'High Risk', color: '#dc3545' };
   };
 
-  const getDoughnutData = (probability) => {
-    const riskProb = probability;
-    const safeProb = 1 - probability;
+  // Simple CSS-based visualizations
+  const SimpleProgressBar = ({ percentage, color, label }) => (
+    <div className="mb-3">
+      <div className="d-flex justify-content-between mb-1">
+        <span className="text-white">{label}</span>
+        <span className="text-white">{percentage.toFixed(1)}%</span>
+      </div>
+      <div className="progress" style={{ height: '20px', backgroundColor: 'rgba(255,255,255,0.1)' }}>
+        <div 
+          className="progress-bar" 
+          style={{ width: `${percentage}%`, backgroundColor: color }}
+        ></div>
+      </div>
+    </div>
+  );
+
+  const SimpleRiskMeter = ({ probability }) => {
     const riskLevel = getRiskLevel(probability);
-
-    return {
-      labels: ['Risk Probability', 'Safe Probability'],
-      datasets: [{
-        data: [riskProb, safeProb],
-        backgroundColor: [riskLevel.color, '#6c757d'],
-        borderColor: ['#ffffff', '#ffffff'],
-        borderWidth: 2,
-      }],
-    };
-  };
-
-  const getBarData = (probability) => {
-    const riskLevel = getRiskLevel(probability);
-    const levels = ['Low Risk', 'Moderate Risk', 'High Risk'];
-    const colors = ['#28a745', '#ffc107', '#dc3545'];
-
-    const currentIndex = levels.indexOf(riskLevel.level);
-    const values = levels.map((level, index) =>
-      index <= currentIndex ? (index === currentIndex ? probability * 100 : (index === 0 ? 30 : index === 1 ? 70 : 100)) : 0
+    const percentage = probability * 100;
+    
+    return (
+      <div className="text-center p-4">
+        <div className="position-relative d-inline-block">
+          <div 
+            className="rounded-circle d-flex align-items-center justify-content-center"
+            style={{
+              width: '150px',
+              height: '150px',
+              background: `conic-gradient(${riskLevel.color} ${percentage * 3.6}deg, rgba(255,255,255,0.1) 0deg)`,
+              border: '5px solid rgba(255,255,255,0.2)'
+            }}
+          >
+            <div 
+              className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
+              style={{ width: '120px', height: '120px', backgroundColor: 'rgba(30,30,30,0.9)' }}
+            >
+              {percentage.toFixed(1)}%
+            </div>
+          </div>
+        </div>
+        <div className="mt-3">
+          <span className="badge px-3 py-2" style={{ backgroundColor: riskLevel.color }}>
+            {riskLevel.level}
+          </span>
+        </div>
+      </div>
     );
-
-    return {
-      labels: levels,
-      datasets: [{
-        label: 'Risk Level (%)',
-        data: values,
-        backgroundColor: colors.map((color, index) =>
-          index === currentIndex ? color : 'rgba(108, 117, 125, 0.3)'
-        ),
-        borderColor: colors,
-        borderWidth: 1,
-      }],
-    };
   };
 
-  const getLineData = (probability) => {
-    const timeLabels = ['6 AM', '9 AM', '12 PM', '3 PM', '6 PM', '9 PM', '12 AM'];
-    const baseRisk = probability * 100;
-    const riskVariations = [
-      baseRisk * 0.7,  // 6 AM - Lower risk
-      baseRisk * 1.2,  // 9 AM - Higher risk (rush hour)
-      baseRisk * 0.9,  // 12 PM - Moderate risk
-      baseRisk * 0.8,  // 3 PM - Lower risk
-      baseRisk * 1.3,  // 6 PM - Highest risk (evening rush)
-      baseRisk * 1.1,  // 9 PM - Moderate-high risk
-      baseRisk * 0.6   // 12 AM - Lowest risk
-    ];
-
-    return {
-      labels: timeLabels,
-      datasets: [{
-        label: 'Risk Probability (%)',
-        data: riskVariations,
-        borderColor: '#ff6b35',
-        backgroundColor: 'rgba(255, 107, 53, 0.1)',
-        borderWidth: 3,
-        fill: true,
-        tension: 0.4,
-        pointBackgroundColor: '#ff6b35',
-        pointBorderColor: '#ffffff',
-        pointBorderWidth: 2,
-        pointRadius: 6,
-      }],
-    };
-  };
-
-  const doughnutOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'bottom',
-        labels: {
-          color: 'white',
-          font: { size: 14 }
-        }
-      },
-      tooltip: {
-        callbacks: {
-          label: function(context) {
-            return `${context.label}: ${(context.parsed * 100).toFixed(2)}%`;
-          }
-        }
-      }
-    },
-  };
-
-  const barOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    scales: {
-      y: {
-        beginAtZero: true,
-        max: 100,
-        ticks: {
-          color: 'white',
-          callback: function(value) {
-            return value + '%';
-          }
-        },
-        grid: {
-          color: 'rgba(255, 255, 255, 0.1)'
-        }
-      },
-      x: {
-        ticks: {
-          color: 'white'
-        },
-        grid: {
-          color: 'rgba(255, 255, 255, 0.1)'
-        }
-      }
-    },
-    plugins: {
-      legend: {
-        display: false
-      },
-      tooltip: {
-        callbacks: {
-          label: function(context) {
-            return `${context.parsed.y}%`;
-          }
-        }
-      }
-    },
-  };
-
-  const lineOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    scales: {
-      y: {
-        beginAtZero: true,
-        ticks: {
-          color: 'white',
-          callback: function(value) {
-            return value.toFixed(1) + '%';
-          }
-        },
-        grid: {
-          color: 'rgba(255, 255, 255, 0.1)'
-        }
-      },
-      x: {
-        ticks: {
-          color: 'white'
-        },
-        grid: {
-          color: 'rgba(255, 255, 255, 0.1)'
-        }
-      }
-    },
-    plugins: {
-      legend: {
-        labels: {
-          color: 'white'
-        }
-      },
-      tooltip: {
-        callbacks: {
-          label: function(context) {
-            return `${context.parsed.y.toFixed(2)}%`;
-          }
-        }
-      }
-    },
-  };
+  // Removed chart options - using simple CSS visualizations
 
   return (
     <>
@@ -582,32 +436,34 @@ const PredictionForm = () => {
 
           {/* Enhanced Dashboard */}
           <Row className="mt-4">
-            <Col lg={4} md={6} className="mb-4">
+            <Col lg={6} md={12} className="mb-4">
               <Card className="border-0 rounded-4" style={{ background: 'rgba(30, 30, 30, 0.95)' }}>
                 <Card.Body className="p-3">
-                  <h5 className="text-white text-center mb-3">📊 Risk Distribution</h5>
-                  <div style={{ height: '250px' }}>
-                    <Doughnut data={getDoughnutData(prediction)} options={doughnutOptions} />
-                  </div>
+                  <h5 className="text-white text-center mb-3">📊 Risk Assessment</h5>
+                  <SimpleRiskMeter probability={prediction} />
                 </Card.Body>
               </Card>
             </Col>
-            <Col lg={4} md={6} className="mb-4">
+            <Col lg={6} md={12} className="mb-4">
               <Card className="border-0 rounded-4" style={{ background: 'rgba(30, 30, 30, 0.95)' }}>
                 <Card.Body className="p-3">
-                  <h5 className="text-white text-center mb-3">📈 Risk Level Indicator</h5>
-                  <div style={{ height: '250px' }}>
-                    <Bar data={getBarData(prediction)} options={barOptions} />
-                  </div>
-                </Card.Body>
-              </Card>
-            </Col>
-            <Col lg={4} md={12} className="mb-4">
-              <Card className="border-0 rounded-4" style={{ background: 'rgba(30, 30, 30, 0.95)' }}>
-                <Card.Body className="p-3">
-                  <h5 className="text-white text-center mb-3">🕰️ Hourly Risk Trend</h5>
-                  <div style={{ height: '250px' }}>
-                    <Line data={getLineData(prediction)} options={lineOptions} />
+                  <h5 className="text-white text-center mb-3">📈 Risk Breakdown</h5>
+                  <div className="p-3">
+                    <SimpleProgressBar 
+                      percentage={prediction * 100} 
+                      color={getRiskLevel(prediction).color} 
+                      label="Accident Risk" 
+                    />
+                    <SimpleProgressBar 
+                      percentage={(1 - prediction) * 100} 
+                      color="#28a745" 
+                      label="Safety Level" 
+                    />
+                    <SimpleProgressBar 
+                      percentage={Math.min(100, formData.speed_limit)} 
+                      color="#17a2b8" 
+                      label="Speed Factor" 
+                    />
                   </div>
                 </Card.Body>
               </Card>
