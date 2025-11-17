@@ -3,27 +3,49 @@ from flask_cors import CORS
 import pickle
 import pandas as pd
 import os
+import gc
+import logging
 
 app = Flask(__name__, static_folder='frontend/build', static_url_path='')
-CORS(app)  # Enable CORS for React frontend
+CORS(app, origins=['https://yourdomain.com'])  # Restrict CORS
 
-# Load the model
-try:
-    with open("model.pkl", "rb") as f:
-        model = pickle.load(f)
-    print("Model loaded successfully")
-except FileNotFoundError:
-    raise Exception("model.pkl not found")
-except Exception as e:
-    print(f"Error loading model: {e}")
-    raise
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Global model variable
+model = None
+
+def load_model():
+    global model
+    if model is None:
+        try:
+            with open("model.pkl", "rb") as f:
+                model = pickle.load(f)
+            print("Model loaded successfully")
+        except FileNotFoundError:
+            print("model.pkl not found")
+            model = None
+        except Exception as e:
+            print(f"Error loading model: {e}")
+            model = None
+    return model
+
+@app.route('/health')
+def health_check():
+    return jsonify({'status': 'healthy', 'model_loaded': model is not None})
 
 @app.route('/predict', methods=['POST'])
 def predict_risk():
     try:
-        print("Received prediction request")
+        current_model = load_model()
+        if current_model is None:
+            logger.error('Model not available')
+            return jsonify({'error': 'Service unavailable'}), 503
+            
         data = request.get_json()
-        print("Request data:", data)
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
 
         # Validate required fields
         required_fields = [
@@ -79,13 +101,16 @@ def predict_risk():
         print(df.dtypes)
 
         # Make prediction
-        prediction = model.predict(df)[0]
-        print("Prediction result:", prediction)
-
+        prediction = current_model.predict(df)[0]
+        
+        # Clean up memory
+        del df
+        gc.collect()
+        
         return jsonify({"accident_risk": float(prediction)})
 
     except Exception as e:
-        print("Error occurred:", str(e))
+        gc.collect()
         return jsonify({'error': str(e)}), 500
 
 @app.route('/')

@@ -1,27 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { Card, Form, Button, Row, Col, Alert, Spinner } from 'react-bootstrap';
-import { Doughnut, Bar } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  ArcElement,
-  Tooltip,
-  Legend,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-} from 'chart.js';
-
-ChartJS.register(
-  ArcElement,
-  Tooltip,
-  Legend,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title
-);
+// Removed chart.js dependencies for simpler deployment
 
 const PredictionForm = () => {
   const [formData, setFormData] = useState({
@@ -79,7 +59,8 @@ const PredictionForm = () => {
       };
 
       console.log('Sending request data:', requestData);
-      const response = await axios.post('http://localhost:5000/predict', requestData);
+      const apiUrl = process.env.NODE_ENV === 'production' ? '/predict' : 'http://localhost:5000/predict';
+      const response = await axios.post(apiUrl, requestData);
       console.log('Received response:', response.data);
       setPrediction(response.data.accident_risk);
     } catch (err) {
@@ -99,106 +80,56 @@ const PredictionForm = () => {
     return { level: 'High Risk', color: '#dc3545' };
   };
 
-  const getDoughnutData = (probability) => {
-    const riskProb = probability;
-    const safeProb = 1 - probability;
+  // Simple CSS-based visualizations
+  const SimpleProgressBar = ({ percentage, color, label }) => (
+    <div className="mb-3">
+      <div className="d-flex justify-content-between mb-1">
+        <span className="text-white">{label}</span>
+        <span className="text-white">{percentage.toFixed(1)}%</span>
+      </div>
+      <div className="progress" style={{ height: '20px', backgroundColor: 'rgba(255,255,255,0.1)' }}>
+        <div 
+          className="progress-bar" 
+          style={{ width: `${percentage}%`, backgroundColor: color }}
+        ></div>
+      </div>
+    </div>
+  );
+
+  const SimpleRiskMeter = ({ probability }) => {
     const riskLevel = getRiskLevel(probability);
-
-    return {
-      labels: ['Risk Probability', 'Safe Probability'],
-      datasets: [{
-        data: [riskProb, safeProb],
-        backgroundColor: [riskLevel.color, '#6c757d'],
-        borderColor: ['#ffffff', '#ffffff'],
-        borderWidth: 2,
-      }],
-    };
-  };
-
-  const getBarData = (probability) => {
-    const riskLevel = getRiskLevel(probability);
-    const levels = ['Low Risk', 'Moderate Risk', 'High Risk'];
-    const colors = ['#28a745', '#ffc107', '#dc3545'];
-
-    const currentIndex = levels.indexOf(riskLevel.level);
-    const values = levels.map((level, index) =>
-      index <= currentIndex ? (index === currentIndex ? probability * 100 : (index === 0 ? 30 : index === 1 ? 70 : 100)) : 0
+    const percentage = probability * 100;
+    
+    return (
+      <div className="text-center p-4">
+        <div className="position-relative d-inline-block">
+          <div 
+            className="rounded-circle d-flex align-items-center justify-content-center"
+            style={{
+              width: '150px',
+              height: '150px',
+              background: `conic-gradient(${riskLevel.color} ${percentage * 3.6}deg, rgba(255,255,255,0.1) 0deg)`,
+              border: '5px solid rgba(255,255,255,0.2)'
+            }}
+          >
+            <div 
+              className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
+              style={{ width: '120px', height: '120px', backgroundColor: 'rgba(30,30,30,0.9)' }}
+            >
+              {percentage.toFixed(1)}%
+            </div>
+          </div>
+        </div>
+        <div className="mt-3">
+          <span className="badge px-3 py-2" style={{ backgroundColor: riskLevel.color }}>
+            {riskLevel.level}
+          </span>
+        </div>
+      </div>
     );
-
-    return {
-      labels: levels,
-      datasets: [{
-        label: 'Risk Level (%)',
-        data: values,
-        backgroundColor: colors.map((color, index) =>
-          index === currentIndex ? color : 'rgba(108, 117, 125, 0.3)'
-        ),
-        borderColor: colors,
-        borderWidth: 1,
-      }],
-    };
   };
 
-  const doughnutOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'bottom',
-        labels: {
-          color: 'white',
-          font: { size: 14 }
-        }
-      },
-      tooltip: {
-        callbacks: {
-          label: function(context) {
-            return `${context.label}: ${(context.parsed * 100).toFixed(2)}%`;
-          }
-        }
-      }
-    },
-  };
-
-  const barOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    scales: {
-      y: {
-        beginAtZero: true,
-        max: 100,
-        ticks: {
-          color: 'white',
-          callback: function(value) {
-            return value + '%';
-          }
-        },
-        grid: {
-          color: 'rgba(255, 255, 255, 0.1)'
-        }
-      },
-      x: {
-        ticks: {
-          color: 'white'
-        },
-        grid: {
-          color: 'rgba(255, 255, 255, 0.1)'
-        }
-      }
-    },
-    plugins: {
-      legend: {
-        display: false
-      },
-      tooltip: {
-        callbacks: {
-          label: function(context) {
-            return `${context.parsed.y}%`;
-          }
-        }
-      }
-    },
-  };
+  // Removed chart options - using simple CSS visualizations
 
   return (
     <>
@@ -209,7 +140,7 @@ const PredictionForm = () => {
               <Col md={6} className="mb-3">
                 <Form.Group>
                   <Form.Label className="fw-semibold">
-                    <i className="fas fa-road me-2"></i>Road Type
+                    🛣️ Road Type
                   </Form.Label>
                   <Form.Select
                     name="road_type"
@@ -228,7 +159,7 @@ const PredictionForm = () => {
               <Col md={6} className="mb-3">
                 <Form.Group>
                   <Form.Label className="fw-semibold">
-                    <i className="fas fa-arrows-alt-h me-2"></i>Number of Lanes
+                    🛣️ Number of Lanes
                   </Form.Label>
                   <div className="d-flex align-items-center">
                     <Button
@@ -265,7 +196,7 @@ const PredictionForm = () => {
               <Col md={6} className="mb-3">
                 <Form.Group>
                   <Form.Label className="fw-semibold">
-                    <i className="fas fa-wave-square me-2"></i>Curvature (0-1)
+                    🌀 Curvature (0-1)
                   </Form.Label>
                   <Form.Control
                     type="number"
@@ -283,7 +214,7 @@ const PredictionForm = () => {
               <Col md={6} className="mb-3">
                 <Form.Group>
                   <Form.Label className="fw-semibold">
-                    <i className="fas fa-tachometer-alt me-2"></i>Speed Limit (km/h)
+                    🏁 Speed Limit (km/h)
                   </Form.Label>
                   <Form.Control
                     type="number"
@@ -301,7 +232,7 @@ const PredictionForm = () => {
               <Col md={6} className="mb-3">
                 <Form.Group>
                   <Form.Label className="fw-semibold">
-                    <i className="fas fa-lightbulb me-2"></i>Lighting
+                    💡 Lighting
                   </Form.Label>
                   <Form.Select
                     name="lighting"
@@ -320,7 +251,7 @@ const PredictionForm = () => {
               <Col md={6} className="mb-3">
                 <Form.Group>
                   <Form.Label className="fw-semibold">
-                    <i className="fas fa-cloud-rain me-2"></i>Weather
+                    ☁️ Weather
                   </Form.Label>
                   <Form.Select
                     name="weather"
@@ -341,7 +272,7 @@ const PredictionForm = () => {
               <Col md={6} className="mb-3">
                 <Form.Group>
                   <Form.Label className="fw-semibold">
-                    <i className="fas fa-sign me-2"></i>Road Signs Present
+                    🚦 Road Signs Present
                   </Form.Label>
                   <Form.Select
                     name="road_signs_present"
@@ -359,7 +290,7 @@ const PredictionForm = () => {
               <Col md={6} className="mb-3">
                 <Form.Group>
                   <Form.Label className="fw-semibold">
-                    <i className="fas fa-users me-2"></i>Public Road
+                    🏢 Public Road
                   </Form.Label>
                   <Form.Select
                     name="public_road"
@@ -379,7 +310,7 @@ const PredictionForm = () => {
               <Col md={6} className="mb-3">
                 <Form.Group>
                   <Form.Label className="fw-semibold">
-                    <i className="fas fa-clock me-2"></i>Time of Day
+                    🕰️ Time of Day
                   </Form.Label>
                   <Form.Select
                     name="time_of_day"
@@ -398,7 +329,7 @@ const PredictionForm = () => {
               <Col md={6} className="mb-3">
                 <Form.Group>
                   <Form.Label className="fw-semibold">
-                    <i className="fas fa-exclamation-triangle me-2"></i>Number of Reported Accidents
+                    ⚠️ Number of Reported Accidents
                   </Form.Label>
                   <Form.Control
                     type="number"
@@ -416,7 +347,7 @@ const PredictionForm = () => {
               <Col md={6} className="mb-3">
                 <Form.Group>
                   <Form.Label className="fw-semibold">
-                    <i className="fas fa-calendar-alt me-2"></i>Holiday
+                    🎆 Holiday
                   </Form.Label>
                   <Form.Select
                     name="holiday"
@@ -434,7 +365,7 @@ const PredictionForm = () => {
               <Col md={6} className="mb-3">
                 <Form.Group>
                   <Form.Label className="fw-semibold">
-                    <i className="fas fa-school me-2"></i>School Season
+                    🏫 School Season
                   </Form.Label>
                   <Form.Select
                     name="school_season"
@@ -461,11 +392,11 @@ const PredictionForm = () => {
                 {loading ? (
                   <>
                     <Spinner animation="border" size="sm" className="me-2" />
-                    Calculating Risk...
+                    🔄 Calculating Risk...
                   </>
                 ) : (
                   <>
-                    <i className="fas fa-calculator me-2"></i>Calculate Risk
+                    📊 Calculate Risk Assessment 🛡️
                   </>
                 )}
               </Button>
@@ -476,8 +407,7 @@ const PredictionForm = () => {
 
       {error && (
         <Alert variant="danger" className="mt-4 rounded-4">
-          <i className="fas fa-exclamation-triangle me-2"></i>
-          {error}
+          ⚠️ {error}
         </Alert>
       )}
 
@@ -486,42 +416,137 @@ const PredictionForm = () => {
           <Card className="border-0 rounded-4 prediction-result">
             <Card.Body className="text-center p-4">
               <div className="mb-3">
-                <i className="fas fa-exclamation-triangle fa-2x text-white mb-3"></i>
-                <h4 className="fw-bold text-white">Road Accident Risk Assessment</h4>
+                <div className="fs-1 mb-3">⚠️🚦⚠️</div>
+                <h4 className="fw-bold text-white">🛡️ Road Accident Risk Assessment 🛡️</h4>
               </div>
               <div className="display-4 fw-bold text-white mb-2">
                 {(prediction * 100).toFixed(2)}%
               </div>
-              <p className="text-white-50 mb-3">Probability of Road Accident</p>
+              <p className="text-white-50 mb-3">📊 Probability of Road Accident 📊</p>
               <div className="mb-3">
                 <span className="badge fs-6 px-3 py-2" style={{
                   backgroundColor: getRiskLevel(prediction).color,
                   color: 'white'
                 }}>
-                  {getRiskLevel(prediction).level} Risk
+                  {getRiskLevel(prediction).level === 'Low Risk' ? '🟢' : 
+                   getRiskLevel(prediction).level === 'Moderate Risk' ? '🟡' : '🔴'} {getRiskLevel(prediction).level}
                 </span>
               </div>
             </Card.Body>
           </Card>
 
+          {/* Enhanced Dashboard */}
           <Row className="mt-4">
-            <Col md={6} className="mb-4">
+            <Col lg={6} md={12} className="mb-4">
               <Card className="border-0 rounded-4" style={{ background: 'rgba(30, 30, 30, 0.95)' }}>
                 <Card.Body className="p-3">
-                  <h5 className="text-white text-center mb-3">Risk Distribution</h5>
-                  <div style={{ height: '250px' }}>
-                    <Doughnut data={getDoughnutData(prediction)} options={doughnutOptions} />
+                  <h5 className="text-white text-center mb-3">📊 Risk Assessment</h5>
+                  <SimpleRiskMeter probability={prediction} />
+                </Card.Body>
+              </Card>
+            </Col>
+            <Col lg={6} md={12} className="mb-4">
+              <Card className="border-0 rounded-4" style={{ background: 'rgba(30, 30, 30, 0.95)' }}>
+                <Card.Body className="p-3">
+                  <h5 className="text-white text-center mb-3">📈 Risk Breakdown</h5>
+                  <div className="p-3">
+                    <SimpleProgressBar 
+                      percentage={prediction * 100} 
+                      color={getRiskLevel(prediction).color} 
+                      label="Accident Risk" 
+                    />
+                    <SimpleProgressBar 
+                      percentage={(1 - prediction) * 100} 
+                      color="#28a745" 
+                      label="Safety Level" 
+                    />
+                    <SimpleProgressBar 
+                      percentage={Math.min(100, formData.speed_limit)} 
+                      color="#17a2b8" 
+                      label="Speed Factor" 
+                    />
                   </div>
                 </Card.Body>
               </Card>
             </Col>
-            <Col md={6} className="mb-4">
+          </Row>
+
+          {/* Additional Statistics Dashboard */}
+          <Row className="mt-3">
+            <Col md={12}>
               <Card className="border-0 rounded-4" style={{ background: 'rgba(30, 30, 30, 0.95)' }}>
-                <Card.Body className="p-3">
-                  <h5 className="text-white text-center mb-3">Risk Level Indicator</h5>
-                  <div style={{ height: '250px' }}>
-                    <Bar data={getBarData(prediction)} options={barOptions} />
-                  </div>
+                <Card.Body className="p-4">
+                  <h5 className="text-white text-center mb-4">📊 Road Safety Analytics Dashboard</h5>
+                  <Row>
+                    <Col md={3} className="text-center mb-3">
+                      <div className="p-3 rounded" style={{ background: 'rgba(40, 167, 69, 0.2)' }}>
+                        <div className="fs-2 mb-2">🛡️</div>
+                        <h6 className="text-white">Safety Score</h6>
+                        <div className="fs-4 fw-bold text-success">
+                          {(100 - prediction * 100).toFixed(1)}%
+                        </div>
+                      </div>
+                    </Col>
+                    <Col md={3} className="text-center mb-3">
+                      <div className="p-3 rounded" style={{ background: 'rgba(255, 193, 7, 0.2)' }}>
+                        <div className="fs-2 mb-2">⚠️</div>
+                        <h6 className="text-white">Risk Level</h6>
+                        <div className="fs-4 fw-bold text-warning">
+                          {getRiskLevel(prediction).level.split(' ')[0]}
+                        </div>
+                      </div>
+                    </Col>
+                    <Col md={3} className="text-center mb-3">
+                      <div className="p-3 rounded" style={{ background: 'rgba(23, 162, 184, 0.2)' }}>
+                        <div className="fs-2 mb-2">🚦</div>
+                        <h6 className="text-white">Road Type</h6>
+                        <div className="fs-6 fw-bold text-info text-capitalize">
+                          {formData.road_type} 🛣️
+                        </div>
+                      </div>
+                    </Col>
+                    <Col md={3} className="text-center mb-3">
+                      <div className="p-3 rounded" style={{ background: 'rgba(220, 53, 69, 0.2)' }}>
+                        <div className="fs-2 mb-2">🏁</div>
+                        <h6 className="text-white">Speed Limit</h6>
+                        <div className="fs-4 fw-bold text-danger">
+                          {formData.speed_limit} km/h
+                        </div>
+                      </div>
+                    </Col>
+                  </Row>
+                  
+                  <Row className="mt-3">
+                    <Col md={12}>
+                      <div className="text-center p-3 rounded" style={{ background: 'rgba(108, 117, 125, 0.2)' }}>
+                        <h6 className="text-white mb-3">📊 Current Conditions Summary</h6>
+                        <div className="d-flex justify-content-center flex-wrap gap-3">
+                          <span className="badge bg-secondary px-3 py-2">
+                            ☁️ {formData.weather.charAt(0).toUpperCase() + formData.weather.slice(1)}
+                          </span>
+                          <span className="badge bg-secondary px-3 py-2">
+                            💡 {formData.lighting.charAt(0).toUpperCase() + formData.lighting.slice(1)}
+                          </span>
+                          <span className="badge bg-secondary px-3 py-2">
+                            🕰️ {formData.time_of_day.charAt(0).toUpperCase() + formData.time_of_day.slice(1)}
+                          </span>
+                          <span className="badge bg-secondary px-3 py-2">
+                            🛣️ {formData.num_lanes} Lanes
+                          </span>
+                          {formData.holiday === 'true' && (
+                            <span className="badge bg-warning px-3 py-2">
+                              🎆 Holiday
+                            </span>
+                          )}
+                          {formData.school_season === 'true' && (
+                            <span className="badge bg-info px-3 py-2">
+                              🏫 School Season
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </Col>
+                  </Row>
                 </Card.Body>
               </Card>
             </Col>
